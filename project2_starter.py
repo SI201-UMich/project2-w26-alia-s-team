@@ -1,14 +1,14 @@
 # SI 201 HW4 (Library Checkout System)
-# Your name:
-# Your student id:
-# Your email:
-# Who or what you worked with on this homework (including generative AI like ChatGPT):
+# Your name: Alia Somero
+# Your student id: 9567 7398
+# Your email: aliasome@umich.edu
+# Who or what you worked with on this homework (including generative AI like ChatGPT): I worked on my own, and used chat GPT.
 # If you worked with generative AI also add a statement for how you used it.
-# e.g.:
+# e.g.: Used to help me outline my functions.
 # Asked ChatGPT for hints on debugging and for suggestions on overall code structure
-#
+# Yes.
 # Did your use of GenAI on this assignment align with your goals and guidelines in your Gen AI contract? If not, why?
-#
+# 
 # --- ARGUMENTS & EXPECTED RETURN VALUES PROVIDED --- #
 # --- SEE INSTRUCTIONS FOR FULL DETAILS ON METHOD IMPLEMENTATION --- #
 
@@ -41,7 +41,27 @@ def load_listing_results(html_path) -> list[tuple]:
     # ==============================
     # YOUR CODE STARTS HERE
     # ==============================
-    pass
+from bs4 import BeautifulSoup
+import re
+
+def load_listing_results(html_path) -> list[tuple]:
+
+    with open(html_path, "r", encoding="utf-8-sig") as file:
+        soup = BeautifulSoup(file, "html.parser")
+
+    results = []
+
+    for link in soup.find_all("a"):
+        href = link.get("href")
+        if href and "/rooms/" in href:
+            match = re.search(r"/rooms/(\d+)", href)
+            if match:
+                listing_id = match.group(1)
+                title = link.get_text(strip=True)
+                if title:
+                    results.append((title, listing_id))
+
+    return results
     # ==============================
     # YOUR CODE ENDS HERE
     # ==============================
@@ -70,7 +90,56 @@ def get_listing_details(listing_id) -> dict:
     # ==============================
     # YOUR CODE STARTS HERE
     # ==============================
-    pass
+    
+    with open(f"html_files/listing_{listing_id}.html", "r", encoding="utf-8-sig") as file:
+        soup = BeautifulSoup(file, "html.parser")
+
+    text = soup.get_text()
+
+    if "Pending" in text:
+        policy_number = "Pending"
+    elif "Exempt" in text:
+        policy_number = "Exempt"
+    else:
+        match = re.search(r"(STR-\d+|\d{4}-\d+STR)", text)
+        policy_number = match.group(1) if match else ""
+
+    host_type = "Superhost" if "Superhost" in text else "regular"
+
+    host_name = ""
+    for span in soup.find_all("span"):
+        t = span.get_text(strip=True)
+        if "Hosted by" in t:
+            host_name = t.replace("Hosted by", "").strip()
+            break
+
+    if "Private room" in text:
+        room_type = "Private Room"
+    elif "Shared room" in text:
+        room_type = "Shared Room"
+    else:
+        room_type = "Entire Room"
+
+    location_rating = 0.0
+    for span in soup.find_all("span"):
+        try:
+            num = float(span.get_text(strip=True))
+            if 0 <= num <= 5:
+                location_rating = num
+                break
+        except:
+            continue
+
+    return {
+        listing_id: {
+            "policy_number": policy_number,
+            "host_type": host_type,
+            "host_name": host_name,
+            "room_type": room_type,
+            "location_rating": location_rating
+        }
+    }
+# finished
     # ==============================
     # YOUR CODE ENDS HERE
     # ==============================
@@ -91,10 +160,27 @@ def create_listing_database(html_path) -> list[tuple]:
     # ==============================
     # YOUR CODE STARTS HERE
     # ==============================
-    pass
+    
+    listings = load_listing_results(html_path)
+
+    data = []
+
+    for title, listing_id in listings:
+        details = get_listing_details(listing_id)[listing_id]
+
+        policy_number = details["policy_number"]
+        host_type = details["host_type"]
+        host_name = details["host_name"]
+        room_type = details["room_type"]
+        location_rating = details["location_rating"]
+
+        data.append((title, listing_id, policy_number, host_type, host_name, room_type, location_rating))
+
+    return data
     # ==============================
     # YOUR CODE ENDS HERE
     # ==============================
+    # Complete!
 
 
 def output_csv(data, filename) -> None:
