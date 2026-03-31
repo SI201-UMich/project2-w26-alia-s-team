@@ -66,116 +66,85 @@ def load_listing_results(html_path) -> list[tuple]:
 
 def get_listing_details(listing_id) -> dict:
     
-    import os
-    from bs4 import BeautifulSoup
+    
+    """
+    Parse through listing_<id>.html to extract listing details.
 
-    # Correct file path
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(script_dir, "html_files", f"listing_{listing_id}.html")
+    Args:
+        listing_id (str): The listing id of the Airbnb listing
 
-    with open(file_path, "r", encoding="utf-8-sig") as file:
-        soup = BeautifulSoup(file, "html.parser")
-
-    # ------------------------
-    # POLICY NUMBER
-    # ------------------------
-    policy_number = ""
-    for tag in soup.find_all(string=True):
-        text = tag.strip()
-        if "STR-" in text:
-            policy_number = text
-            break
-
-    # ------------------------
-    # HOST NAME
-    # ------------------------
-    host_name = ""
-    for tag in soup.find_all(string=True):
-        if "Hosted by" in tag:
-            host_name = tag.replace("Hosted by", "").strip()
-            break
-
-    # ------------------------
-    # HOST TYPE
-    # ------------------------
-    host_type = "Regular"
-    for tag in soup.find_all(string=True):
-        if "Superhost" in tag:
-            host_type = "Superhost"
-            break
-
-    # ------------------------
-    # ROOM TYPE (from meta)
-    # ------------------------
-    room_type = ""
-    meta = soup.find("meta", property="og:description")
-
-    if meta:
-        content = meta.get("content", "")
-
-        if "Entire" in content:
-            room_type = "Entire Room"
-        elif "Private room" in content:
-            room_type = "Private Room"
-        elif "Shared room" in content:
-            room_type = "Shared Room"
-
-    # ------------------------
-    # LOCATION RATING (FINAL FIX)
-    # ------------------------
-    location_rating = 0.0
-
-    for tag in soup.find_all(string=True):
-        text = tag.strip()
-
-        if "Location" in text:
-            parts = text.split()
-
-            for part in parts:
-                try:
-                    location_rating = float(part)
-                    break
-                except:
-                    continue
-
-            if location_rating != 0.0:
-                break
-
-    # ------------------------
-    # RETURN
-    # ------------------------
-    return {
-        listing_id: {
-            "policy_number": policy_number,
-            "host_type": host_type,
-            "host_name": host_name,
-            "room_type": room_type,
-            "location_rating": location_rating
+    Returns:
+        dict: Nested dictionary in the format:
+        {
+            "<listing_id>": {
+                "policy_number": str,
+                "host_type": str,
+                "host_name": str,
+                "room_type": str,
+                "location_rating": float
+            }
         }
-    }
-    # YOUR CODE ENDS HERE
-    # ==============================
-    # Complete!
+    """
+    
+    html_file = os.path.join("html_files", f"listing_{listing_id}.html")
+    with open(html_file, 'r', encoding="utf-8-sig") as f:
+        html_content = f.read()
+        soup = BeautifulSoup(html_content, 'html.parser')
+    d = {}
+    in_d ={}
+    d[listing_id] = in_d
 
-def output_csv(data, filename) -> None:
-    import csv
+    host = soup.find('div', class_ = '_1k8vduze')
+    if not host:
+        host = soup.find('ul', class_ = 'fhhmddr')
+        
+        policy_num = host.find('span', class_ = 'll4r2nl').text
+    else:
+        policy_num = host.find('span', class_ = 'll4r2nl').text
+    if policy_num:
+        in_d['policy_number'] = policy_num
+    
+    host_type = soup.find('span', class_ = "_1mhorg9")
+    if host_type:
+        in_d['host_type'] = "Superhost"
+    else:
+        in_d['host_type'] = 'regular'
 
-    # sort by location rating (index 6) in descending order
-    data = sorted(data, key=lambda x: x[6], reverse=True)
+    host_tag = soup.find('div', class_ = 'c6y5den')
+    host = host_tag.find('h2', class_ = 'hnwb2pb').text
+    in_d['host_name'] = host.strip()[10:]
 
-    # open file and write
-    with open(filename, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
+    room_type = soup.find('div', class_ = '_kh3xmo')
+    
+    if not room_type:
+        room_tag = soup.find('div', class_ = '_cv5qq4')
+        room_type = room_tag.find('h2', class_ = '_14i3z6h').text.strip()
+    else:
+        room_type = room_type.text.strip()
+    
+    if 'private' in room_type.lower():
+        in_d['room_type'] = 'Private Room'
+    elif 'shared' in room_type.lower():
+        in_d['room_type'] = 'Shared Room'
+    else:
+        in_d['room_type'] = 'Entire Room'
 
-        # write header
-        writer.writerow([
-            "Listing Title", "Listing ID", "Policy Number",
-            "Host Type", "Host Name", "Room Type", "Location Rating"
-        ])
+    ratings_tag = soup.find_all('div', class_ = '_a3qxec')
+    
+    rating_val = 0.0
+    for tag in ratings_tag:
+            
+            rating = tag.find('div', class_ = '_y1ba89')
+            
+            if rating and rating.text.strip() == "Location":
+                rating_val = tag.find('span', class_='_4oybiu').text
+                
+    in_d['location_rating'] = float(rating_val)
+    d[listing_id] = inner_d
+   
+    return d
+# finished, modified get listing details
 
-        # write data rows
-        for row in data:
-            writer.writerow(row)
     
     
 
