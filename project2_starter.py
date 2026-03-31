@@ -145,7 +145,48 @@ def get_listing_details(listing_id) -> dict:
     return d
 # finished, modified get listing details
 
+def create_listing_database(html_path) -> list[tuple]: 
+    """
+    Use prior functions to gather all necessary information and create a database of listings.
+
+    Args:
+        html_path (str): The path to the HTML file containing the search results
+
+    Returns:
+        list[tuple]: A list of tuples. Each tuple contains:
+        (listing_title, listing_id, policy_number, host_type, host_name, room_type, location_rating)
+    """
     
+    # TODO: Implement checkout logic following the instructions
+    # ==============================
+    # YOUR CODE STARTS HERE
+    # ==============================
+
+
+    listings = load_listing_results(html_path)
+    data = []
+
+    for listing_title, listing_id in listings: 
+        # print(listing_id)
+        details = get_listing_details(listing_id)
+        info = details[listing_id]
+
+
+        row = (
+            listing_title, 
+            listing_id, 
+            info["policy_number"], 
+            info["host_type"], 
+            info["host_name"],
+            info["room_type"],
+            info["location_rating"],
+        )
+        data.append(row)
+    return data
+    # ==============================
+    # YOUR CODE ENDS HERE
+    # ==============================
+   
     
 
 
